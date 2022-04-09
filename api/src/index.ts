@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { json, Request, Response } from "express";
 import { genres, movies } from "./db";
 import { Movie, Genre } from "./types";
 
@@ -14,13 +14,13 @@ app.get("/movies", (req: Request, resp: Response) => {
   const query: string | null = req.params.search || "";
   try {
     if (query === "") {
-      return resp.send(movies);
+      return resp.status(201).json({ data: movies });
     }
     const results: Array<Movie> = movies.filter((movie) =>
       movie.title.includes(query)
     );
 
-    return resp.send(results);
+    return resp.status(201).json({ data: results });
   } catch (err) {
     resp.status(500).json({ message: "Something went wrong" });
   }
@@ -30,7 +30,7 @@ app.get("/movies", (req: Request, resp: Response) => {
  * Return all genres.
  */
 app.get("/genres", (req: Request, resp: Response) => {
-  return resp.send(genres);
+  return resp.status(201).json({ data: genres });
 });
 
 /**
@@ -42,11 +42,11 @@ app.get("/movies/:id", (req, resp) => {
       (movie) => movie.id === parseInt(req.params.id)
     );
     if (!movie) {
-      return resp.status(404).send("Movie not found");
+      return resp.status(404).json({ message: "Movie not found" });
     }
-    return resp.send(movie);
+    return resp.status(201).json({ data: movie });
   } catch (e) {
-    return resp.status(500).send({ message: "Something went wrong" });
+    return resp.status(500).json({ message: "Something went wrong" });
   }
 });
 
@@ -59,11 +59,11 @@ app.get("/genres/:id", (req, resp) => {
     const id = Number(req.params.id);
     const genre: Genre | undefined = genres.find((genre) => genre.id === id);
     if (!genre) {
-      return resp.status(404).send({ error: "Genre not found" });
+      return resp.status(404).send({ message: "Genre not found" });
     }
-    return resp.send(genre);
+    return resp.status(201).json({ data: genre });
   } catch (error) {
-    return resp.status(500).send({ message: "Something went wrong" });
+    return resp.status(500).json({ message: "Something went wrong" });
   }
 });
 
@@ -73,18 +73,22 @@ app.get("/genres/:id", (req, resp) => {
  */
 app.post("/movies/:id/ratings", (req, resp) => {
   // TODO
-  const ratingVal = req.body.ratingVal;
-  const id = Number(req.params.id);
-  const movie = movies.find((movie) => movie.id === id);
-  if (!movie) {
-    return resp.status(404).send({ error: "Movie not found" });
+  try {
+    const ratingVal = req.body.ratingVal;
+    const id = Number(req.params.id);
+    const movie = movies.find((movie) => movie.id === id);
+    if (!movie) {
+      return resp.status(404).send({ message: "Movie not found" });
+    }
+    const movieIndex = movies.indexOf(movie);
+    movies[movieIndex].vote_count += 1;
+    movies[movieIndex].vote_average =
+      (movie.vote_average * (movie.vote_count - 1) + ratingVal) /
+      movie.vote_count;
+    return resp.status(201).json({ data: movies });
+  } catch (error) {
+    return resp.status(500).json({ message: "Something went wrong" });
   }
-  const movieIndex = movies.indexOf(movie);
-  movies[movieIndex].vote_count += 1;
-  movies[movieIndex].vote_average =
-    (movie.vote_average * (movie.vote_count - 1) + ratingVal) /
-    movie.vote_count;
-  return resp.send(movies);
 });
 
 /**
@@ -99,9 +103,9 @@ app.get("/movies/sort/popularity", (req, resp) => {
       (a, b) =>
         parseFloat(String(b.popularity)) - parseFloat(String(a.popularity))
     );
-    return resp.send(movieListCopy);
+    return resp.status(201).json({ data: movieListCopy });
   } catch (error) {
-    return resp.status(500).send({ message: "Something went wrong" });
+    return resp.status(500).json({ message: "Something went wrong" });
   }
 });
 
@@ -125,7 +129,7 @@ app.get("/movies/filter/:genre", (req, resp) => {
         }
       });
     }
-    return resp.send(filteredMovies);
+    return resp.status(201).json({ data: filteredMovies });
   } catch (error) {
     return resp.status(500).send({ message: "Something went wrong" });
   }
@@ -134,3 +138,5 @@ app.get("/movies/filter/:genre", (req, resp) => {
 app.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`);
 });
+
+export default app;
