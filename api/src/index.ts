@@ -135,6 +135,17 @@ app.get("/movies/filter/:genre", (req, resp) => {
   }
 });
 
+app.post("/movies/add", (req, resp) => {
+  // TODO
+  try {
+    const newMovie: Movie = req.body;
+    movies.push(newMovie);
+    return resp.status(201).json({ data: movies });
+  } catch (error) {
+    return resp.status(500).send({ message: "Something went wrong" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening at http://localhost:${PORT}`);
 });
